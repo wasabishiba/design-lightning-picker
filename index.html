@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Lightning Picker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap');
+
+  :root {
+    --bg: oklch(0.95 0.025 68);
+    --bg-warm: oklch(0.90 0.05 62);
+    --machine-body: oklch(0.42 0.06 38);
+    --machine-highlight: oklch(0.52 0.07 42);
+    --machine-shadow: oklch(0.28 0.04 32);
+    --reel-bg: oklch(0.12 0.02 270);
+    --reel-deep: oklch(0.08 0.015 270);
+    --gold: oklch(0.82 0.15 85);
+    --gold-bright: oklch(0.90 0.13 88);
+    --gold-dim: oklch(0.62 0.13 72);
+    --cream: oklch(0.96 0.025 85);
+    --text-dark: oklch(0.22 0.07 38);
+    --text-warm: oklch(0.45 0.10 42);
+    --shiba-body: oklch(0.74 0.14 60);
+    --shiba-face: oklch(0.94 0.035 80);
+    --shiba-ear: oklch(0.86 0.06 68);
+    --shiba-dark: oklch(0.18 0.02 38);
+    --shiba-nose: oklch(0.22 0.03 38);
+    --blush: oklch(0.76 0.12 22);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Warm radial wash */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 35%, var(--bg-warm), transparent);
+    pointer-events: none;
+  }
+
+  /* Noise grain texture */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.3;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    z-index: 0;
+  }
+
+  /* --- HEADER --- */
+  .header {
+    text-align: left;
+    z-index: 1;
+    margin-top: 48px;
+    margin-bottom: 4px;
+    opacity: 0;
+    animation: fadeDown 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    width: 380px;
+    align-self: center;
+  }
+
+  .header-eyebrow {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-warm);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(48px, 7vw, 72px);
+    color: var(--text-dark);
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+  }
+
+  /* --- MAIN STAGE --- */
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* --- SHIBA PHOTO --- */
+  .shiba-photo {
+    width: 440px;
+    max-width: 90vw;
+    margin-bottom: -100px;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: shibaEnter 0.7s 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .shiba-photo img {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 8px 24px oklch(0 0 0 / 0.15));
+  }
+
+  @keyframes shibaEnter {
+    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* --- MACHINE --- */
+  .machine {
+    position: relative;
+    background: var(--machine-body);
+    border-radius: 24px;
+    padding: 24px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 380px;
+    box-shadow:
+      0 1px 0 inset var(--machine-highlight),
+      0 -1px 0 inset var(--machine-shadow),
+      0 32px 80px -16px oklch(0.18 0.07 38 / 0.55);
+    transition: transform 0.15s;
+  }
+
+  .machine.shake {
+    animation: machineShake 0.4s ease-out;
+  }
+
+  @keyframes machineShake {
+    0% { transform: translateX(0); }
+    15% { transform: translateX(-6px) rotate(-0.5deg); }
+    30% { transform: translateX(5px) rotate(0.4deg); }
+    45% { transform: translateX(-4px) rotate(-0.3deg); }
+    60% { transform: translateX(3px) rotate(0.2deg); }
+    75% { transform: translateX(-1px); }
+    100% { transform: translateX(0); }
+  }
+
+  .machine-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .machine-label-text {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .label-light {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    box-shadow: 0 0 4px var(--gold-dim);
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  .label-light:nth-child(3) { animation-delay: 0.8s; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; box-shadow: 0 0 10px var(--gold); }
+  }
+
+  /* Reel */
+  .reel-frame {
+    background: oklch(0.06 0.01 270);
+    border-radius: 16px;
+    padding: 4px;
+    width: 320px;
+    position: relative;
+    box-shadow: inset 0 6px 20px oklch(0 0 0 / 0.7);
+    transition: box-shadow 0.3s;
+  }
+
+  .reel-frame.glow {
+    box-shadow:
+      inset 0 6px 20px oklch(0 0 0 / 0.7),
+      0 0 30px oklch(0.82 0.15 85 / 0.2),
+      0 0 60px oklch(0.82 0.15 85 / 0.08);
+  }
+
+  .reel-window {
+    height: 280px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 12px;
+    background: var(--reel-deep);
+  }
+
+  .reel-track {
+    display: flex;
+    flex-direction: column;
+    will-change: transform;
+  }
+
+  .reel-item {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 19px;
+    font-weight: 400;
+    color: oklch(0.78 0.03 78);
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0 20px;
+    letter-spacing: -0.01em;
+  }
+
+  /* Selection band */
+  .reel-window::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 58px;
+    transform: translateY(-50%);
+    background: oklch(0.82 0.15 85 / 0.06);
+    border-top: 1px solid oklch(0.82 0.15 85 / 0.2);
+    border-bottom: 1px solid oklch(0.82 0.15 85 / 0.2);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* Depth fade */
+  .reel-window::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom,
+        var(--reel-deep) 0%, transparent 28%,
+        transparent 72%, var(--reel-deep) 100%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Arrow */
+  .reel-arrow {
+    position: absolute;
+    left: -2px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+  }
+
+  .reel-arrow svg {
+    display: block;
+    filter: drop-shadow(2px 0 4px oklch(0 0 0 / 0.4));
+  }
+
+  /* --- PULL BUTTON --- */
+  .pull-btn {
+    margin-top: 20px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pull-btn-face {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gold);
+    color: var(--machine-shadow);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 14px 40px;
+    border-radius: 50px;
+    box-shadow:
+      0 4px 0 var(--gold-dim),
+      0 8px 24px oklch(0 0 0 / 0.2);
+    transition: transform 0.08s, box-shadow 0.08s;
+    user-select: none;
+  }
+
+  .pull-btn:hover .pull-btn-face {
+    transform: translateY(-2px);
+    box-shadow:
+      0 6px 0 var(--gold-dim),
+      0 10px 28px oklch(0 0 0 / 0.25);
+  }
+
+  .pull-btn:active .pull-btn-face {
+    transform: translateY(3px);
+    box-shadow:
+      0 1px 0 var(--gold-dim),
+      0 3px 10px oklch(0 0 0 / 0.12);
+  }
+
+  .pull-btn:disabled { pointer-events: none; }
+  .pull-btn:disabled .pull-btn-face { opacity: 0.4; }
+
+  .pull-btn .paw-icon {
+    width: 20px;
+    height: 20px;
+    opacity: 0.6;
+  }
+
+  /* --- WINNER REVEAL --- */
+  .winner-area {
+    margin-top: 20px;
+    margin-bottom: 80px;
+    text-align: center;
+    z-index: 2;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .winner-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-warm);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .winner-label.show { opacity: 1; }
+
+  .winner-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(36px, 6vw, 64px);
+    color: var(--text-dark);
+    margin-top: 6px;
+    opacity: 0;
+    transform: translateY(20px) scale(0.92);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    line-height: 1.1;
+  }
+
+  .winner-name.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .spin-again {
+    margin-top: 20px;
+    background: none;
+    border: 1.5px solid oklch(0.60 0.08 55 / 0.35);
+    color: var(--text-warm);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 28px;
+    border-radius: 24px;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.3s, background 0.2s, border-color 0.2s;
+    letter-spacing: 0.04em;
+  }
+
+  .spin-again.show { opacity: 1; }
+  .spin-again:hover {
+    background: oklch(0.60 0.08 55 / 0.06);
+    border-color: oklch(0.60 0.08 55 / 0.55);
+  }
+
+
+  /* --- CELEBRATION --- */
+  .celebration {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    opacity: 0;
+    animation: confettiExplode 3s cubic-bezier(0.08, 0.82, 0.17, 1) forwards;
+  }
+
+  @keyframes confettiExplode {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) rotate(0deg) scale(0.5);
+    }
+    8% {
+      opacity: 1;
+      transform: translate(var(--dx), var(--dy)) rotate(90deg) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx), calc(var(--dy) + 60vh)) rotate(var(--rot)) scale(0.4);
+    }
+  }
+
+  /* Celebration shibas */
+  .celebrate-shiba {
+    position: fixed;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  .celebrate-shiba.cl {
+    bottom: -120px;
+    left: 6%;
+    animation: shibaPopLeft 0.9s 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .celebrate-shiba.cr {
+    bottom: -120px;
+    right: 6%;
+    animation: shibaPopRight 0.9s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes shibaPopLeft {
+    to { transform: translateY(-180px) rotate(-10deg); }
+  }
+
+  @keyframes shibaPopRight {
+    to { transform: translateY(-180px) rotate(10deg); }
+  }
+
+  .speech-bubble {
+    position: fixed;
+    z-index: 12;
+    background: var(--cream);
+    border-radius: 14px;
+    padding: 10px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-dark);
+    pointer-events: none;
+    opacity: 0;
+    box-shadow: 0 6px 24px oklch(0 0 0 / 0.1);
+    animation: bubbleIn 0.4s 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .speech-bubble.sb-left { bottom: 110px; left: calc(6% + 100px); }
+  .speech-bubble.sb-right { bottom: 110px; right: calc(6% + 100px); }
+
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    width: 10px;
+    height: 10px;
+    background: var(--cream);
+    transform: rotate(45deg);
+  }
+
+  .speech-bubble.sb-left::after { left: 18px; }
+  .speech-bubble.sb-right::after { right: 18px; }
+
+  @keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.85); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* --- ANIMATIONS --- */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">May 2026</div>
+  <h1>Design<br>Lightning</h1>
+</div>
+
+<div class="stage">
+  <div class="shiba-photo">
+    <img src="shibas.png" alt="Four shiba inus sitting together">
+  </div>
+
+  <div class="machine" id="machine">
+    <div class="reel-frame" id="reelFrame">
+      <div class="reel-window">
+        <div class="reel-track" id="reelTrack"></div>
+      </div>
+      <div class="reel-arrow">
+        <svg width="20" height="32" viewBox="0 0 20 32" fill="none">
+          <path d="M20 16L0 0V32L20 16Z" fill="var(--gold)"/>
+        </svg>
+      </div>
+    </div>
+
+    <button class="pull-btn" id="pullBtn" onclick="spin()">
+      <div class="pull-btn-face">
+        <svg class="paw-icon" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="12" cy="16.5" rx="5.5" ry="4.5"/>
+          <ellipse cx="6.5" cy="10" rx="2.3" ry="3" transform="rotate(-10 6.5 10)"/>
+          <ellipse cx="11" cy="8" rx="2" ry="2.8"/>
+          <ellipse cx="15.5" cy="8.5" rx="2" ry="2.8" transform="rotate(8 15.5 8.5)"/>
+          <ellipse cx="19" cy="11" rx="2.2" ry="2.8" transform="rotate(18 19 11)"/>
+        </svg>
+        PULL
+      </div>
+    </button>
+  </div>
+
+</div>
+
+<div class="winner-area">
+  <div class="winner-label" id="winnerLabel">Next host is</div>
+  <div class="winner-name" id="winnerName"></div>
+</div>
+
+<button class="spin-again" id="spinAgain" onclick="reset()">Spin again</button>
+
+<div class="celebration" id="celebration"></div>
+
+<script>
+const names = [
+  "Adil Dhanani","Allie Toltzman","Almog Cohen","Andrew Gosine","Andy Acevedo",
+  "Annie Lawn","Brandon Wells","Caroline Shen","Catherine Ratana-Kelley","Chandler Bales",
+  "Colson Rice","Dan Fornal","Daniel Letson","Eileen Murphy Bernard","Eliza Gonzales",
+  "Emily Straubel","Eva McEnrue","Frannie Ucciferri","Gabriela Saravia Lopez","Ida Leung",
+  "Irene Georgiou","Iustina Kelty","James Barnes","James Yi","Janine Baltazar",
+  "Jeff Appel","Jennifer Tan","Jessica Phan","Jisoo Kim","John Knight",
+  "Josie Jeffries","Kat Temple","Kathryn Mena","Kenny Hopper","Lacey Maas",
+  "Lauren Baker","Lauren Park","Liz Sarni","Luca Masud","Manish Shah",
+  "Marcos Calamato","Meghan Uno","Michael Belen","Michael Weisburd","Miguel Fernandez",
+  "Mina Chandler","Minh Nguyen","Pam Lama","Pendar Yousefi","Rick Minno",
+  "RJ Owen","Ronnie Siu","Samuel Kang","Sara Jibreal","Sean Nelson",
+  "Shannon Tinkley","Sheila Kazan","Sheila O'Hara","Skip Hursh","Stefanie Franciotti",
+  "Teresa Coathup","Tina Wang","Uren Mador","Viplav Upadhyay","Wendy Kan",
+  "Wii Yatani","Will Miner","Zhenya Globazh"
+];
+
+const shibaQuotes = [
+  "wow. such host.",
+  "much present. very design.",
+  "wow. the chosen one.",
+  "such luck. much talent.",
+  "so brave. very talk.",
+  "much excite. wow.",
+  "very speaker. such inspire.",
+  "amaze. so next month.",
+];
+
+const ITEM_HEIGHT = 56;
+const track = document.getElementById('reelTrack');
+const pullBtn = document.getElementById('pullBtn');
+const machine = document.getElementById('machine');
+const reelFrame = document.getElementById('reelFrame');
+let spinning = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildReel() {
+  track.innerHTML = '';
+  const rounds = 4;
+  let allNames = [];
+  for (let r = 0; r < rounds; r++) {
+    allNames = allNames.concat(shuffle(names));
+  }
+  allNames.forEach(name => {
+    const div = document.createElement('div');
+    div.className = 'reel-item';
+    div.textContent = name;
+    track.appendChild(div);
+  });
+  track.style.transform = `translateY(${-ITEM_HEIGHT * 2}px)`;
+}
+
+buildReel();
+
+function spin() {
+  if (spinning) return;
+  spinning = true;
+  pullBtn.disabled = true;
+
+  document.getElementById('winnerLabel').classList.remove('show');
+  document.getElementById('winnerName').classList.remove('show');
+  document.getElementById('winnerName').textContent = '';
+  document.getElementById('spinAgain').classList.remove('show');
+  document.getElementById('celebration').innerHTML = '';
+    machine.classList.remove('shake');
+
+  buildReel();
+  reelFrame.classList.add('glow');
+
+  const targetItemIndex = names.length * 2 + Math.floor(Math.random() * names.length);
+  const targetOffset = -(targetItemIndex * ITEM_HEIGHT) + (ITEM_HEIGHT * 2);
+  const winner = track.children[targetItemIndex].textContent;
+
+  const duration = 5000;
+  const startTime = performance.now();
+  const startOffset = -ITEM_HEIGHT * 2;
+
+  function easeOutExpo(t) {
+    return t === 1 ? 1 : 1 - Math.pow(2, -14 * t);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeOutExpo(progress);
+    const currentOffset = startOffset + (targetOffset - startOffset) * eased;
+    track.style.transform = `translateY(${currentOffset}px)`;
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      reelFrame.classList.remove('glow');
+      machine.classList.add('shake');
+      spinning = false;
+      showWinner(winner);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function showWinner(name) {
+  const label = document.getElementById('winnerLabel');
+  const winnerEl = document.getElementById('winnerName');
+  const again = document.getElementById('spinAgain');
+
+  setTimeout(() => {
+    label.classList.add('show');
+  }, 250);
+
+  setTimeout(() => {
+    winnerEl.textContent = name;
+    winnerEl.classList.add('show');
+    celebrate();
+    again.classList.add('show');
+    pullBtn.disabled = false;
+  }, 650);
+}
+
+function celebrate() {
+  const container = document.getElementById('celebration');
+  container.innerHTML = '';
+
+  const palette = [
+    'oklch(0.82 0.15 85)',
+    'oklch(0.74 0.14 60)',
+    'oklch(0.68 0.17 35)',
+    'oklch(0.90 0.06 88)',
+    'oklch(0.60 0.15 48)',
+    'oklch(0.55 0.19 22)',
+    'oklch(0.94 0.03 80)',
+  ];
+
+  for (let i = 0; i < 70; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 80 + Math.random() * 250;
+    el.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+    el.style.setProperty('--dy', `${Math.sin(angle) * dist - 100}px`);
+    el.style.setProperty('--rot', `${360 + Math.random() * 720}deg`);
+    el.style.background = palette[Math.floor(Math.random() * palette.length)];
+    el.style.width = (5 + Math.random() * 9) + 'px';
+    el.style.height = (5 + Math.random() * 9) + 'px';
+    el.style.borderRadius = Math.random() > 0.4 ? '50%' : '2px';
+    el.style.animationDelay = (Math.random() * 0.3) + 's';
+    container.appendChild(el);
+  }
+
+  // Celebration shibas
+  const shibaImg = `<img src="shibas.png" alt="" style="width:160px;height:auto;filter:drop-shadow(0 4px 12px oklch(0 0 0/0.2))">`;
+
+  const shibaL = document.createElement('div');
+  shibaL.className = 'celebrate-shiba cl';
+  shibaL.innerHTML = shibaImg;
+  container.appendChild(shibaL);
+
+  const shibaR = document.createElement('div');
+  shibaR.className = 'celebrate-shiba cr';
+  shibaR.innerHTML = shibaImg;
+  shibaR.querySelector('img').style.transform = 'scaleX(-1)';
+  container.appendChild(shibaR);
+
+  const quote = shibaQuotes[Math.floor(Math.random() * shibaQuotes.length)];
+  const b1 = document.createElement('div');
+  b1.className = 'speech-bubble sb-left';
+  b1.textContent = quote;
+  container.appendChild(b1);
+
+  const b2 = document.createElement('div');
+  b2.className = 'speech-bubble sb-right';
+  b2.textContent = 'wow!!!';
+  container.appendChild(b2);
+}
+
+function reset() {
+  document.getElementById('winnerLabel').classList.remove('show');
+  document.getElementById('winnerName').classList.remove('show');
+  document.getElementById('winnerName').textContent = '';
+  document.getElementById('spinAgain').classList.remove('show');
+  document.getElementById('celebration').innerHTML = '';
+    machine.classList.remove('shake');
+  buildReel();
+}
+</script>
+</body>
+</html>
